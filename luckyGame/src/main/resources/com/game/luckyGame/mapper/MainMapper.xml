@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">     
+<mapper namespace="com.game.luckyGame.mapper.MainMapper">      
+
+	<resultMap id="playerMap" type="com.game.luckyGame.vo.Player">
+		<result column="player_id" property="playerId" />
+		<result column="nickname" property="nickname" />
+		<result column="stage" property="stage" />
+		<result column="possibility" property="possibility" />		
+		<result column="creation_date" property="creationDate" />		
+	</resultMap>
+
+	<select id = "selectRankingList" parameterType="hashMap" resultMap = "playerMap">
+	
+	SELECT 
+	player_id
+	, nickname
+	, stage
+	, possibility, 
+	creation_date FROM (
+	    SELECT 
+			player_id
+			, nickname
+			, stage
+			, CONCAT(possibility, '%') AS possibility
+			, SUBSTR(creation_date,0,10) AS creation_date
+			FROM player WHERE 1=1	
+			<if test="playerId != null">
+                AND player_id = #{playerId}
+        	</if>	
+        	ORDER BY TO_NUMBER(stage) DESC ,sysdate asc)temp
+ 	<![CDATA[
+     WHERE ROWNUM <= 10
+     ]]>
+			       
+	</select>
+	<select id ="selectNextPlayerId" resultType="long">
+		SELECT player_id_seq.nextval FROM DUAL	
+	</select>
+	<insert id = "insertPlayerInfo" parameterType="com.game.luckyGame.vo.Player">
+		INSERT INTO player VALUES
+		(#{playerId}, #{nickname}, #{stage}, #{possibility}, sysdate)
+	</insert>
+	
+	<update id = "updatelayerInfo" parameterType="com.game.luckyGame.vo.Player">
+		UPDATE player 
+		SET 
+			stage = #{stage}, 
+			possibility= #{possibility},
+			creation_date=sysdate
+		WHERE player_id = #{playerId}
+	</update>
+	
+	<select id = "selectStageDescription" parameterType="com.game.luckyGame.vo.Player" resultType = "String">
+		SELECT description_stage
+		FROM stage_info
+		WHERE stage = TO_NUMBER(#{stage}) + 1
+	</select>
+	
+	<select id = "selectRankInfo" parameterType="com.game.luckyGame.vo.Player" resultType = "hashMap">
+		SELECT 
+			a.totalCnt
+			, b.playerRank 
+			, CONCAT(TRUNC((b.playerrank / a.totalCnt) * 100), '%') AS percentage
+		FROM (SELECT COUNT(*) AS totalCnt FROM player)a
+		, (SELECT COUNT(*) AS playerRank FROM player WHERE stage >= TO_NUMBER(#{stage}))b
+	
+	</select>
+</mapper>
